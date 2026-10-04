@@ -15,7 +15,8 @@
 | Variable | Required | Default | Description | Sensitive |
 |----------|----------|---------|-------------|-----------|
 | `SERVER_HOST` | No | `127.0.0.1` | HTTP server bind address | No |
-| `SERVER_PORT` | No | `8080` | HTTP server port | No |
+| `PORT` | No | — | Platform-provided HTTP server port; takes precedence over `SERVER_PORT` | No |
+| `SERVER_PORT` | No | `8080` | Local/default HTTP server port | No |
 | `RUST_LOG` | No | `ybm_connect=info` | Log level filter | No |
 | `DATABASE_URL` | **Yes** | — | PostgreSQL connection string | **Yes** |
 | `DATABASE_MAX_CONNECTIONS` | No | `10` | Max DB pool connections | No |
@@ -36,11 +37,12 @@
 | `SMTP_PORT` | If using SMTP | `587` | SMTP server port | No |
 | `SMTP_USERNAME` | If using SMTP | — | SMTP auth username | **Yes** |
 | `SMTP_PASSWORD` | If using SMTP | — | SMTP auth password | **Yes** |
-| `R2_ACCOUNT_ID` | **Yes** | — | Cloudflare account ID | No |
-| `R2_ACCESS_KEY_ID` | **Yes** | — | R2 access key | **Yes** |
-| `R2_SECRET_ACCESS_KEY` | **Yes** | — | R2 secret key | **Yes** |
-| `R2_BUCKET_NAME` | **Yes** | — | R2 bucket name | No |
-| `R2_ENDPOINT` | **Yes** | — | R2 endpoint URL | No |
+| `R2_ENABLED` | No | `true` | Enable S3-compatible media storage | No |
+| `R2_ACCOUNT_ID` | If using R2 | — | Cloudflare account ID | No |
+| `R2_ACCESS_KEY_ID` | If using R2 | — | R2 access key | **Yes** |
+| `R2_SECRET_ACCESS_KEY` | If using R2 | — | R2 secret key | **Yes** |
+| `R2_BUCKET_NAME` | If using R2 | — | R2 bucket name | No |
+| `R2_ENDPOINT` | If using R2 | — | R2 endpoint URL | No |
 | `TURN_SERVER_URL` | No | — | TURN server URL | No |
 | `TURN_SECRET` | If using TURN | — | TURN shared secret | **Yes** |
 | `TURN_REALM` | If using TURN | — | TURN realm | No |

@@ -16,7 +16,7 @@ pub struct AppStateInner {
     pub config: Config,
     pub db_pool: PgPool,
     pub redis: Client,
-    pub storage: aws_sdk_s3::Client,
+    pub storage: Option<aws_sdk_s3::Client>,
     pub connection_manager: ConnectionManager,
     pub instance_id: Uuid,
     pub notification_tx: NotificationSender,
@@ -25,20 +25,24 @@ pub struct AppStateInner {
 
 impl AppState {
     pub fn new(config: Config, db_pool: PgPool, redis: Client) -> Self {
-        let storage_config = aws_sdk_s3::config::Builder::new()
-            .behavior_version(aws_sdk_s3::config::BehaviorVersion::latest())
-            .region(aws_sdk_s3::config::Region::new("auto"))
-            .credentials_provider(aws_sdk_s3::config::Credentials::new(
-                &config.r2_access_key_id,
-                &config.r2_secret_access_key,
-                None,
-                None,
-                "ybm-connect-r2",
-            ))
-            .endpoint_url(&config.r2_endpoint)
-            .force_path_style(true)
-            .build();
-        let storage = aws_sdk_s3::Client::from_conf(storage_config);
+        let storage = if config.r2_enabled {
+            let storage_config = aws_sdk_s3::config::Builder::new()
+                .behavior_version(aws_sdk_s3::config::BehaviorVersion::latest())
+                .region(aws_sdk_s3::config::Region::new("auto"))
+                .credentials_provider(aws_sdk_s3::config::Credentials::new(
+                    &config.r2_access_key_id,
+                    &config.r2_secret_access_key,
+                    None,
+                    None,
+                    "ybm-connect-r2",
+                ))
+                .endpoint_url(&config.r2_endpoint)
+                .force_path_style(true)
+                .build();
+            Some(aws_sdk_s3::Client::from_conf(storage_config))
+        } else {
+            None
+        };
         let notification_tx = crate::notifications::worker::start(db_pool.clone(), config.clone());
         let metrics =
             Arc::new(Metrics::new().expect("metrics registry initialization must succeed"));
@@ -69,8 +73,8 @@ impl AppState {
         &self.inner.redis
     }
 
-    pub fn storage(&self) -> &aws_sdk_s3::Client {
-        &self.inner.storage
+    pub fn storage(&self) -> Option<&aws_sdk_s3::Client> {
+        self.inner.storage.as_ref()
     }
 
     pub fn connection_manager(&self) -> &ConnectionManager {

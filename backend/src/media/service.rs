@@ -45,6 +45,7 @@ pub async fn upload(
 
     state
         .storage()
+        .ok_or_else(|| AppError::ServiceUnavailable("Media storage is disabled".into()))?
         .put_object()
         .bucket(&state.config().r2_bucket_name)
         .key(&original_key)
@@ -58,6 +59,7 @@ pub async fn upload(
         let key = format!("{conversation_id}/{media_id}/thumbnail.webp");
         state
             .storage()
+            .ok_or_else(|| AppError::ServiceUnavailable("Media storage is disabled".into()))?
             .put_object()
             .bucket(&state.config().r2_bucket_name)
             .key(&key)
@@ -175,6 +177,7 @@ async fn signed_url(
         .map_err(|_| AppError::Internal("Invalid media URL expiry".into()))?;
     state
         .storage()
+        .ok_or_else(|| AppError::ServiceUnavailable("Media storage is disabled".into()))?
         .get_object()
         .bucket(&state.config().r2_bucket_name)
         .key(key)

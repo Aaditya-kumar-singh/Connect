@@ -22,6 +22,7 @@ pub struct Config {
     pub email_from: String,
     pub cors_allowed_origins: String,
     pub trust_proxy_headers: bool,
+    pub r2_enabled: bool,
     pub r2_access_key_id: String,
     pub r2_secret_access_key: String,
     pub r2_bucket_name: String,
@@ -40,10 +41,11 @@ pub struct Config {
 impl Config {
     pub fn from_env() -> Result<Self, String> {
         let server_host = env::var("SERVER_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
-        let server_port = env::var("SERVER_PORT")
+        let server_port = env::var("PORT")
+            .or_else(|_| env::var("SERVER_PORT"))
             .unwrap_or_else(|_| "8080".to_string())
             .parse::<u16>()
-            .map_err(|e| format!("Invalid SERVER_PORT: {}", e))?;
+            .map_err(|e| format!("Invalid PORT/SERVER_PORT: {}", e))?;
 
         let rust_log = env::var("RUST_LOG").unwrap_or_else(|_| "ybm_connect=info".to_string());
         let environment = env::var("APP_ENV").unwrap_or_else(|_| "development".to_string());
@@ -109,6 +111,10 @@ impl Config {
             .unwrap_or_else(|_| "false".to_string())
             .parse::<bool>()
             .map_err(|e| format!("Invalid TRUST_PROXY_HEADERS: {e}"))?;
+        let r2_enabled = env::var("R2_ENABLED")
+            .unwrap_or_else(|_| "true".to_string())
+            .parse::<bool>()
+            .map_err(|e| format!("Invalid R2_ENABLED: {e}"))?;
         let r2_access_key_id =
             env::var("R2_ACCESS_KEY_ID").unwrap_or_else(|_| "dev-access-key".to_string());
         let r2_secret_access_key =
@@ -139,12 +145,6 @@ impl Config {
                     &refresh_token_secret,
                     "dev-refresh-token-secret-change-in-production",
                 ),
-                ("R2_ACCESS_KEY_ID", &r2_access_key_id, "dev-access-key"),
-                (
-                    "R2_SECRET_ACCESS_KEY",
-                    &r2_secret_access_key,
-                    "dev-secret-key",
-                ),
             ];
             if insecure_defaults
                 .iter()
@@ -163,8 +163,17 @@ impl Config {
             if redis_url.contains("localhost") || redis_url.contains("127.0.0.1") {
                 return Err("Production REDIS_URL cannot point to localhost".to_string());
             }
-            if r2_endpoint.contains("localhost") || r2_endpoint.contains("127.0.0.1") {
-                return Err("Production R2_ENDPOINT cannot point to localhost".to_string());
+            if r2_enabled {
+                if r2_access_key_id == "dev-access-key" || r2_secret_access_key == "dev-secret-key"
+                {
+                    return Err(
+                        "Production R2 configuration contains an insecure development credential"
+                            .to_string(),
+                    );
+                }
+                if r2_endpoint.contains("localhost") || r2_endpoint.contains("127.0.0.1") {
+                    return Err("Production R2_ENDPOINT cannot point to localhost".to_string());
+                }
             }
             if push_provider.eq_ignore_ascii_case("console") {
                 return Err("Production PUSH_PROVIDER cannot be console".to_string());
@@ -207,6 +216,7 @@ impl Config {
             email_from,
             cors_allowed_origins,
             trust_proxy_headers,
+            r2_enabled,
             r2_access_key_id,
             r2_secret_access_key,
             r2_bucket_name,
