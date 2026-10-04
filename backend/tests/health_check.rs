@@ -26,6 +26,7 @@ fn test_config() -> Config {
         email_from: "noreply@test.local".to_string(),
         cors_allowed_origins: "http://localhost:3000".to_string(),
         trust_proxy_headers: false,
+        r2_enabled: false,
         r2_access_key_id: "test-access-key".to_string(),
         r2_secret_access_key: "test-secret-key".to_string(),
         r2_bucket_name: "test-bucket".to_string(),
