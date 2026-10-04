@@ -86,7 +86,7 @@ All logs are emitted as JSON using the `tracing` + `tracing-subscriber` crates.
 
 ### Prometheus-Compatible Metrics
 
-Exposed at `GET /metrics` in Prometheus text format. Phase 16 currently implements the HTTP, WebSocket, and PostgreSQL pool metrics listed below. Messaging, Redis-operation, and call-specific metrics remain future instrumentation work and are not exposed yet.
+Exposed at `GET /metrics` in Prometheus text format. The endpoint is internal and requires `Authorization: Bearer <METRICS_AUTH_TOKEN>`. Phase 16 currently implements the HTTP, WebSocket, and PostgreSQL pool metrics listed below. Messaging, Redis-operation, and call-specific metrics remain future instrumentation work and are not exposed yet.
 
 #### HTTP Metrics
 

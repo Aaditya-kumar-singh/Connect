@@ -22,6 +22,7 @@ pub struct Config {
     pub email_from: String,
     pub cors_allowed_origins: String,
     pub trust_proxy_headers: bool,
+    pub metrics_auth_token: String,
     pub r2_enabled: bool,
     pub r2_access_key_id: String,
     pub r2_secret_access_key: String,
@@ -111,6 +112,8 @@ impl Config {
             .unwrap_or_else(|_| "false".to_string())
             .parse::<bool>()
             .map_err(|e| format!("Invalid TRUST_PROXY_HEADERS: {e}"))?;
+        let metrics_auth_token = env::var("METRICS_AUTH_TOKEN").unwrap_or_default();
+
         let r2_enabled = env::var("R2_ENABLED")
             .unwrap_or_else(|_| "true".to_string())
             .parse::<bool>()
@@ -178,6 +181,15 @@ impl Config {
             if push_provider.eq_ignore_ascii_case("console") {
                 return Err("Production PUSH_PROVIDER cannot be console".to_string());
             }
+            if !trust_proxy_headers {
+                return Err(
+                    "Production TRUST_PROXY_HEADERS must be true so authentication rate limits are scoped per client IP"
+                        .to_string(),
+                );
+            }
+            if metrics_auth_token.trim().is_empty() {
+                return Err("Production METRICS_AUTH_TOKEN must be configured".to_string());
+            }
         }
 
         if database_max_connections == 0 || database_min_connections == 0 {
@@ -216,6 +228,7 @@ impl Config {
             email_from,
             cors_allowed_origins,
             trust_proxy_headers,
+            metrics_auth_token,
             r2_enabled,
             r2_access_key_id,
             r2_secret_access_key,

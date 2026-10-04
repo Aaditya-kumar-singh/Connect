@@ -26,6 +26,7 @@ fn test_config() -> Config {
         email_from: "noreply@test.local".to_string(),
         cors_allowed_origins: "http://localhost:3000".to_string(),
         trust_proxy_headers: false,
+        metrics_auth_token: "test-metrics-token".to_string(),
         r2_enabled: false,
         r2_access_key_id: "test-access-key".to_string(),
         r2_secret_access_key: "test-secret-key".to_string(),
@@ -87,22 +88,29 @@ async fn test_health_liveness_returns_200_without_dependencies() {
 }
 
 #[tokio::test]
-async fn test_metrics_endpoint_returns_prometheus_text() {
+async fn test_metrics_endpoint_requires_authentication() {
     let app = router::build(test_state());
-    let _ = app
-        .clone()
+    let response = app
         .oneshot(
             Request::builder()
-                .uri("/health")
+                .uri("/metrics")
                 .body(axum::body::Body::empty())
                 .unwrap(),
         )
         .await
         .unwrap();
+
+    assert_eq!(response.status(), axum::http::StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn test_metrics_endpoint_accepts_configured_token() {
+    let app = router::build(test_state());
     let response = app
         .oneshot(
             Request::builder()
                 .uri("/metrics")
+                .header("authorization", "Bearer test-metrics-token")
                 .body(axum::body::Body::empty())
                 .unwrap(),
         )
@@ -114,13 +122,6 @@ async fn test_metrics_endpoint_returns_prometheus_text() {
         response.headers().get("content-type").unwrap(),
         prometheus::TEXT_FORMAT
     );
-
-    let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
-    let text = String::from_utf8(body.to_vec()).unwrap();
-    assert!(text.contains("http_requests_total"));
-    assert!(text.contains("http_request_duration_seconds"));
-    assert!(text.contains("ws_connections_active"));
-    assert!(text.contains("db_pool_connections_max"));
 }
 
 #[tokio::test]

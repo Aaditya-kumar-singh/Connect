@@ -1,6 +1,18 @@
 pub mod health;
 
-async fn metrics_handler(State(state): State<AppState>) -> impl IntoResponse {
+async fn metrics_handler(State(state): State<AppState>, request: Request) -> Response {
+    let authorized = request
+        .headers()
+        .get(header::AUTHORIZATION)
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| value.strip_prefix("Bearer "))
+        .map(|token| token == state.config().metrics_auth_token)
+        .unwrap_or(false);
+
+    if !authorized {
+        return StatusCode::NOT_FOUND.into_response();
+    }
+
     match state.metrics().render(state.db()) {
         Ok(body) => ([(header::CONTENT_TYPE, prometheus::TEXT_FORMAT)], body).into_response(),
         Err(error) => {

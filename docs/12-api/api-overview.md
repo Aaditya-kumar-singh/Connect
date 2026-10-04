@@ -186,7 +186,7 @@ Pagination uses cursor-based pagination (not offset). The `cursor` is an opaque 
 |--------|------|------|-------------|
 | `GET` | `/health` | No | Liveness check |
 | `GET` | `/ready` | No | Readiness check |
-| `GET` | `/metrics` | Internal | Prometheus metrics |
+| `GET` | `/metrics` | Internal | Prometheus metrics; requires `Authorization: Bearer <METRICS_AUTH_TOKEN>` |
 
 ## 5. Error Codes
 

@@ -70,7 +70,7 @@ ls /proc/$(pgrep ybm-connect)/fd | wc -l
 2. `/ready` returns 200 with all checks OK
 3. Test login flow manually
 4. Test sending a message
-5. Check metrics show normal error rate
+5. Check metrics show normal error rate using the configured `METRICS_AUTH_TOKEN`
 
 ### Post-Incident
 - Add root cause to post-mortem document

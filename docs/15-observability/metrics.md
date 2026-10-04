@@ -1,6 +1,6 @@
 # YBM Connect — Metrics
 
-Phase 16 exposes Prometheus-compatible metrics from the Rust backend at `GET /metrics`.
+Phase 16 exposes Prometheus-compatible metrics from the Rust backend at `GET /metrics`. The endpoint is internal and requires `Authorization: Bearer <METRICS_AUTH_TOKEN>`.
 
 ## Implemented
 

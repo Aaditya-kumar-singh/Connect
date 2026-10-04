@@ -52,6 +52,8 @@
 | `VAPID_PUBLIC_KEY` | If using Web Push | — | VAPID public key for browser subscriptions | No |
 | `VAPID_SUBJECT` | If using Web Push | — | VAPID contact URL (`mailto:` or `https://`) | No |
 | `CORS_ALLOWED_ORIGINS` | No | `http://localhost:3000` | Comma-separated CORS origins | No |
+| `TRUST_PROXY_HEADERS` | No | `false` | Trust the deployment reverse proxy's `X-Forwarded-For` for authentication rate-limit identity; required in production | No |
+| `METRICS_AUTH_TOKEN` | **Yes in production** | empty | Bearer token required to access the internal `/metrics` endpoint | **Yes** |
 | `MAX_UPLOAD_SIZE_MB` | No | `50` | Max upload file size in MB | No |
 | `GRACEFUL_SHUTDOWN_TIMEOUT_SECONDS` | No | `30` | Max seconds for graceful shutdown | No |
 
