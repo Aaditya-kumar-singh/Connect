@@ -69,6 +69,10 @@ build-backend:
 build-web:
     cd frontend/web && npm run build
 
+# Observability stack (optional)
+observability:
+    docker compose --profile observability up -d prometheus grafana
+
 # Docker helper
 _wait-for-postgres:
     @powershell -Command "while (!(Test-NetConnection -ComputerName localhost -Port 5432 -InformationLevel Quiet -ErrorAction SilentlyContinue)) { Start-Sleep 1 }"

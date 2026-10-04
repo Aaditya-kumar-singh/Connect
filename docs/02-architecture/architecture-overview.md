@@ -8,7 +8,7 @@
 | **Owner**         | Engineering Lead                           |
 | **Last Updated**  | 2026-10-02                                 |
 | **Related Docs**  | DOC-OVR-001, DOC-ARCH-002 through 010     |
-| **Related ADRs**  | ADR-001 through ADR-017                    |
+| **Related ADRs**  | ADR-001 through ADR-018                    |
 
 ---
 
@@ -38,11 +38,12 @@ A module is extracted into a separate service only when one or more conditions a
 | 7 | Independent ownership | Separate team responsibility |
 | 8 | Clear operational benefit | Reduces blast radius |
 
-**Current architecture has exactly 4 deployment units:**
+**Current architecture has exactly 5 deployment units:**
 1. **Rust Backend** — Axum monolith (REST + WebSocket + workers)
-2. **Web Frontend** — Next.js static/SSR deployment
-3. **Mobile App** — Expo/React Native build
-4. **TURN Server** — coturn (separate because: different protocol (UDP), different resource profile, pre-built binary)
+2. **Erlang/OTP Reliability Service** — OTP sidecar (supervision, circuit breakers, dependency monitoring) — separate because: independent failure domain, different runtime (BEAM VM), reliability-specific responsibilities (ADR-018)
+3. **Web Frontend** — Next.js static/SSR deployment
+4. **Mobile App** — Expo/React Native build
+5. **TURN Server** — coturn (separate because: different protocol (UDP), different resource profile, pre-built binary)
 
 PostgreSQL, Redis, and Cloudflare R2 are managed infrastructure, not deployment units we build.
 
@@ -67,6 +68,7 @@ graph TB
         PG[(PostgreSQL<br/>Primary Database)]
         REDIS[(Redis<br/>Cache + PubSub + Presence)]
         TURN[coturn<br/>TURN/STUN Server]
+        ERLANG[Erlang/OTP Reliability<br/>Supervision + Dependency Recovery]
     end
 
     subgraph "External Services"
@@ -85,10 +87,16 @@ graph TB
 
     AXUM -->|SQL over TLS| PG
     AXUM -->|Redis Protocol| REDIS
+    ERLANG -->|Private Redis Pub/Sub| REDIS
+    ERLANG -.->|Private probe| PG
     AXUM -->|HTTP API| CF_R2
     AXUM -->|SMTP/API| EMAIL
     AXUM -->|HTTP API| FCM
     AXUM -->|HTTP API| WEBPUSH
+    ERLANG -->|Redis Pub/Sub| REDIS
+    ERLANG -.->|Health probes| PG
+    ERLANG -.->|Health probes| REDIS
+    ERLANG -.->|Health probe| CF_R2
 
     WEB -->|WebRTC P2P/TURN| MOBILE
     WEB -->|STUN| TURN
@@ -294,12 +302,13 @@ graph TB
 | ADR-009 | Cloudflare | Edge CDN, DNS, TLS, R2, free tier |
 | ADR-010 | Cloudflare R2 | S3-compatible, zero egress fees |
 | ADR-011 | Modular monolith | Simplicity until scale demands extraction |
-| ADR-012 | Erlang-inspired supervision | Fault tolerance via manual Tokio patterns |
+| ADR-012 | Erlang-inspired supervision (Rust) | Application-level Tokio task isolation (superseded for infrastructure by ADR-018) |
 | ADR-013 | No initial microservices | Operational simplicity for small team |
 | ADR-014 | Auth strategy | Argon2id, short-lived tokens, rotation |
 | ADR-015 | Message idempotency | Client-generated UUID prevents duplicates |
 | ADR-016 | Message ordering | Server timestamp + sequence per conversation |
 | ADR-017 | Media via R2 | Signed URLs, server-side validation |
+| ADR-018 | Erlang/OTP reliability sidecar | OTP supervision, circuit breakers, dependency monitoring for infrastructure fault tolerance |
 
 ---
 

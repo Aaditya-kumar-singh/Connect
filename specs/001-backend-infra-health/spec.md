@@ -80,7 +80,7 @@ Can be tested by passing invalid configuration (fails fast on startup with infor
 - **FR-002**: System MUST provide a `GET /ready` endpoint that actively tests PostgreSQL connectivity (via `SELECT 1`) and Redis connectivity (via `PING`).
 - **FR-003**: System MUST return HTTP 503 on `GET /ready` whenever any required backing service (PostgreSQL or Redis) is unreachable or fails to respond within 2000ms.
 - **FR-004**: System MUST load and validate environment variables from `.env` or system environment using the existing `Config` struct.
-- **FR-005**: System MUST initialize `sqlx::PgPool` and `redis::Client` connection managers and inject them into Axum's shared application state (`AppState`).
+- **FR-005**: System MUST initialize a PostgreSQL `sqlx::PgPool` and Redis `redis::Client` and inject them into Axum's shared application state (`AppState`). The pool/client initialization MUST NOT require the backing services to be reachable before the HTTP server can expose `/health`.
 - **FR-006**: System MUST attach standard HTTP middleware: CORS (configurable allowed origins), request ID tracing with structured tracing spans, request timeout (30s), and gzip compression.
 - **FR-007**: System MUST intercept `SIGINT` and `SIGTERM` signals and execute a graceful shutdown sequence.
 - **FR-008**: System MUST provide automated integration tests asserting HTTP responses for `/health` and `/ready`.

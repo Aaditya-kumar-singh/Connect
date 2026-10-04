@@ -23,9 +23,10 @@ YBM Connect is a production-grade, real-time communication platform supporting t
 
 ### Deployment Units
 1. **Rust Backend** — Axum (REST + WebSocket + background workers)
-2. **Web Frontend** — Next.js + TypeScript
-3. **Mobile App** — React Native / Expo + TypeScript
-4. **TURN Server** — coturn (pre-built, separate because of UDP/different protocol)
+2. **Erlang/OTP Reliability Service** — OTP sidecar (supervision, circuit breakers, dependency monitoring)
+3. **Web Frontend** — Next.js + TypeScript
+4. **Mobile App** — React Native / Expo + TypeScript
+5. **TURN Server** — coturn (pre-built, separate because of UDP/different protocol)
 
 ### Layered Architecture (Backend)
 ```
@@ -37,6 +38,7 @@ Domain types are shared across all layers. Business logic ONLY lives in the Serv
 | Component | Technology | ADR |
 |-----------|-----------|-----|
 | Backend | Rust + Tokio + Axum | ADR-001, 002, 003 |
+| Reliability | Erlang/OTP 27 + rebar3 | ADR-018 |
 | Database | PostgreSQL | ADR-004 |
 | Cache/PubSub | Redis | ADR-005 |
 | Real-time | WebSocket | ADR-006 |
@@ -48,10 +50,10 @@ Domain types are shared across all layers. Business logic ONLY lives in the Serv
 | Mobile Frontend | Expo + TypeScript | — |
 
 ### Language Boundaries
-- **Rust:** All backend services. Default language.
+- **Rust:** All backend application services. Primary backend language.
+- **Erlang/OTP:** Reliability sidecar only (supervision, circuit breakers, dependency monitoring). Must not contain business logic.
 - **TypeScript:** All frontend code (web + mobile).
 - **C (coturn):** Pre-built TURN server. No custom code.
-- No Erlang, Go, or other languages in the initial architecture.
 
 ## 3. Database
 
@@ -131,10 +133,15 @@ Full spec: [docs/13-security/security-architecture.md](docs/13-security/security
 
 ## 9. Fault Tolerance
 
-**Supervision tree:** RootSupervisor → ConnectionManager, MessageWorker, PresenceWorker, NotificationWorker, CallSignalingWorker, MediaWorker, CleanupWorker, HealthCheckWorker.
-**Panic isolation:** Each Tokio task is isolated. A panic in one WebSocket handler does not affect others.
-**Retry strategy:** Exponential backoff with jitter. Maximum retry counts. Circuit breakers for external dependencies.
-**Graceful shutdown:** SIGTERM → stop accepting connections → drain workers → close WebSocket connections → close DB/Redis → exit.
+**Dual-runtime architecture (ADR-012 + ADR-018):**
+- **Rust / Tokio (application-level):** Tokio task panic isolation, mpsc channel-based worker communication, CancellationToken graceful shutdown, manual worker restart.
+- **Erlang/OTP (infrastructure-level):** OTP supervision trees with restart strategies and intensity limits, circuit breakers for external dependencies (PostgreSQL, Redis, R2), dependency health monitors, recovery coordinator.
+
+**Supervision tree (Erlang/OTP):** Root supervisor → health aggregator, dependency monitors, circuit breakers, recovery coordinator. Each supervised with `one_for_one` strategy.
+**Circuit breakers:** CLOSED → OPEN (on failure threshold) → HALF_OPEN (on cooldown) → CLOSED (on successful probe). Per-dependency configuration.
+**Communication:** Rust ↔ Erlang via Redis Pub/Sub (`ybm:reliability:events`, `ybm:reliability:status`).
+**Key principle:** Erlang is advisory, not blocking. Rust operates independently if Erlang is unavailable.
+**Graceful shutdown:** SIGTERM → stop accepting connections → drain workers → close WebSocket connections → Erlang stops monitoring → close DB/Redis → exit.
 
 Full spec: [docs/14-fault-tolerance/fault-tolerance.md](docs/14-fault-tolerance/fault-tolerance.md)
 

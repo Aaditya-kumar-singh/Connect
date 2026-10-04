@@ -258,12 +258,33 @@
 
 | Phase | Goal | Duration Estimate |
 |-------|------|-------------------|
-| **15: Fault Tolerance** | Supervisor tree, circuit breakers, graceful shutdown | 5-7 days |
+| **15: Fault Tolerance & Reliability** | Erlang/OTP supervision layer integrated with Rust services (see details below) | 7-10 days |
 | **16: Observability** | Structured logging, metrics, health checks, dashboards | 3-5 days |
 | **17: Security Hardening** | Rate limiting tuning, security headers, audit logging, penetration testing | 3-5 days |
 | **18: Performance Testing** | Load tests, stress tests, bottleneck identification, optimization | 3-5 days |
 | **19: Deployment** | Production deployment pipeline, Cloudflare setup, domain configuration | 3-5 days |
 | **20: Production Hardening** | Monitoring alerts, runbooks, backup verification, disaster recovery testing | 3-5 days |
+
+### Current Progress — Phase 17
+
+Phase 17 security hardening is in progress. Concrete gaps already patched include atomic refresh-token rotation, explicit proxy-header trust, restricted CORS, baseline security headers, request-body limits, and production configuration checks. Authorization matrix auditing, security-event logging, abuse regression tests, third-party integration review, and penetration testing remain.
+
+### Phase 16 Completion
+
+Phase 16 core observability is implemented in the Rust backend: Prometheus-compatible `/metrics`, bounded HTTP/WebSocket instrumentation, PostgreSQL pool gauges, request-ID tracing context, Prometheus alert rules, and an optional Grafana dashboard stack. Full distributed tracing export and feature-specific messaging/Redis/call metrics remain outside this core implementation.
+
+### Phase 15 Architecture Detail
+
+Phase 15 introduces an **Erlang/OTP reliability sidecar** that runs alongside the existing Rust backend. Each runtime has explicit ownership:
+
+| Runtime | Owns |
+|---------|------|
+| **Rust / Axum** | All application logic: REST APIs, authentication, messaging, conversations, groups, media, notifications, WebSocket protocol, WebRTC signaling, PostgreSQL data access, Redis data access, R2 media access, validation, API contracts |
+| **Erlang/OTP** | Reliability infrastructure: OTP supervision trees, dependency health monitors, circuit breakers (CLOSED/OPEN/HALF_OPEN), retry coordination, recovery detection, graceful shutdown coordination, aggregated health status |
+| **PostgreSQL** | Authoritative persistent data store for all application state |
+| **Redis** | Ephemeral coordination: presence, typing, Pub/Sub message routing, rate limiting, Rust↔Erlang reliability event exchange |
+
+Rust and Erlang communicate exclusively through Redis Pub/Sub channels. Erlang does not access PostgreSQL application data. The Erlang sidecar is advisory: the Rust backend remains fully functional even if the Erlang service is unavailable. See [ADR-018](../02-architecture/architecture-decisions/ADR-018-erlang-otp-fault-tolerance.md) for the full rationale.
 
 ---
 

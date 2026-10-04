@@ -8,7 +8,7 @@
 | **Owner**         | Engineering Lead                           |
 | **Last Updated**  | 2026-10-02                                 |
 | **Related Docs**  | DOC-OVR-002, DOC-OVR-003, DOC-ARCH-001    |
-| **Related ADRs**  | ADR-001 through ADR-017                    |
+| **Related ADRs**  | ADR-001 through ADR-018                    |
 
 ---
 
@@ -98,7 +98,7 @@ All communication is **cross-platform**: any client can message, call, or share 
 | Mobile frontend    | **TypeScript** | React Native/Expo requires it.                        |
 | TURN server        | **C** (coturn) | Pre-built infrastructure; no custom code needed.      |
 
-**Erlang/OTP** is NOT introduced in the initial architecture. The Erlang-inspired supervision model is implemented in Rust using Tokio tasks, channels, and manual supervisor patterns. This avoids a language boundary that would add operational complexity without proportional benefit at current scale. ADR-012 documents the criteria for reconsidering this decision.
+**Erlang/OTP** is introduced in Phase 15 as a narrowly scoped reliability sidecar. It owns infrastructure-level supervision, dependency health monitoring, circuit breakers, and recovery coordination. Rust remains the primary backend runtime and retains application-level Tokio task isolation and graceful shutdown. ADR-018 records the decision; ADR-012 remains valid for Rust application-level worker isolation.
 
 **Go** is NOT introduced. There is no service in the initial architecture where Go provides a clear advantage over Rust for the same workload.
 

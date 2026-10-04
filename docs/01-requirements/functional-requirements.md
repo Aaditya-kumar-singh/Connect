@@ -8,7 +8,7 @@
 | **Owner**         | Engineering Lead                           |
 | **Last Updated**  | 2026-10-02                                 |
 | **Related Docs**  | DOC-REQ-001, DOC-REQ-003, DOC-REQ-004     |
-| **Related ADRs**  | ADR-001 through ADR-017                    |
+| **Related ADRs**  | ADR-001 through ADR-018                    |
 | **Related Reqs**  | BR-001 through BR-011                      |
 
 ---

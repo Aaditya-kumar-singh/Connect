@@ -3,20 +3,22 @@
 | Field             | Value                                      |
 |-------------------|--------------------------------------------|
 | **Document ID**   | `DOC-FT-001`                               |
-| **Version**       | `1.0.0`                                    |
+| **Version**       | `2.0.0`                                    |
 | **Status**        | `APPROVED`                                 |
 | **Owner**         | Engineering Lead                           |
-| **Last Updated**  | 2026-10-02                                 |
+| **Last Updated**  | 2026-10-04                                 |
 | **Related Docs**  | DOC-ARCH-009, DOC-FT-002 through 009      |
-| **Related ADRs**  | ADR-012                                    |
+| **Related ADRs**  | ADR-012, ADR-018                           |
 
 ---
 
-## 1. Supervision Tree
+## 1. Rust Application-Level Supervision
+
+The Rust backend may retain lightweight Tokio task isolation for application workers. Infrastructure-level supervision is owned by the Erlang/OTP sidecar described in Section 6.
 
 ```mermaid
 graph TD
-    ROOT[RootSupervisor<br/>Restarts: unlimited<br/>Strategy: one-for-one]
+    ROOT[Rust Application Worker Isolation<br/>Tokio tasks + explicit shutdown]
     
     ROOT --> CM[ConnectionManager<br/>Manages WebSocket pool<br/>Restart: always]
     ROOT --> MW[MessageWorker<br/>Processes message events<br/>Restart: always]
@@ -28,7 +30,7 @@ graph TD
     ROOT --> HCW[HealthCheckWorker<br/>Checks PG, Redis, R2<br/>Restart: always]
 ```
 
-### Worker Specifications
+### Rust Worker Specifications
 
 | Worker | Inputs | Outputs | Dependencies | Failure Conditions | Restart Strategy | Max Restarts | Backoff |
 |--------|--------|---------|-------------|-------------------|------------------|-------------|---------|
@@ -41,7 +43,7 @@ graph TD
 | **CleanupWorker** | Timer tick (every 5 minutes) | Deleted expired records | PostgreSQL | DB unavailable | Restart with long backoff | 3/minute | 30s, 60s, 120s |
 | **HealthCheckWorker** | Timer tick (every 15 seconds) | Health status updates | PostgreSQL, Redis, R2 | Any dependency check fails | Immediate restart | Unlimited | 1s |
 
-### Worker States
+### Rust Worker States
 
 ```mermaid
 stateDiagram-v2
@@ -227,16 +229,61 @@ tokio::spawn(async move {
 token.cancel(); // All child tokens are cancelled
 ```
 
-## 6. What We Do NOT Get from Rust (vs. Erlang OTP)
+## 6. Erlang/OTP Reliability Layer (ADR-018)
 
-| Feature | Erlang OTP | Our Rust Implementation | Gap |
-|---------|-----------|------------------------|-----|
-| Per-process GC | Each process has its own heap | Global allocator, but no GC pauses | Different trade-off, not a gap |
-| Hot code reloading | Modules can be replaced at runtime | Requires restart (rolling deployment) | Acceptable for this project |
-| Distributed supervision | Supervisors can span nodes | Single-node only | Would need a distributed orchestrator |
-| Process mailboxes | Built into the runtime | mpsc channels (manual setup) | Manual but equivalent |
-| Location transparency | Processes don't know if they're local or remote | All in-process; would need redesign for distribution | Acceptable for single-node |
-| Pre-emptive scheduling | BEAM scheduler is pre-emptive | Tokio is cooperative | Long-running sync work can block; use `spawn_blocking` |
+Phase 15 introduces an Erlang/OTP reliability sidecar that complements the Rust application-level patterns described above. The Erlang/OTP layer provides infrastructure-level fault tolerance using native OTP supervision.
+
+### Architecture Boundary
+
+| Runtime | Fault Tolerance Responsibility |
+|---------|-------------------------------|
+| **Rust / Tokio** | Application-level: Tokio task isolation (panic containment), channel-based communication, CancellationToken shutdown, worker restart within Tokio tasks |
+| **Erlang/OTP** | Infrastructure-level: OTP supervision trees with restart strategies, circuit breakers for external dependencies, dependency health monitoring, recovery coordination |
+
+### OTP Supervision Tree
+
+```
+ym_reliability_sup (root, one_for_one)
+│
+├── ybm_health_sup
+│   └── ybm_health_aggregator
+│
+├── ybm_dependency_sup
+│   ├── ybm_pg_monitor
+│   ├── ybm_redis_monitor
+│   └── ybm_storage_monitor
+│
+├── ybm_circuit_sup
+│   ├── ybm_pg_circuit
+│   ├── ybm_redis_circuit
+│   └── ybm_storage_circuit
+│
+└── ybm_recovery_sup
+    └── ybm_recovery_coordinator
+```
+
+### What OTP Provides That Tokio Does Not
+
+| Capability | OTP | Tokio |
+|-----------|-----|-------|
+| Per-process heap isolation | Each BEAM process has independent heap and GC | Tokio tasks share global allocator |
+| Restart intensity tracking | Built into supervisor (`MaxRestarts` in `MaxSeconds`) | Must be manually implemented |
+| Hierarchical failure escalation | Supervisor crashes propagate to parent supervisor | Manual; no built-in escalation |
+| Deterministic shutdown ordering | `terminate/2` callbacks, supervisor shutdown order | Manual via CancellationToken |
+| Declarative child specifications | Supervisor child specs are data | Worker creation is imperative code |
+| Hot code reloading | Modules replaceable at runtime | Requires restart (rolling deployment) |
+
+### Communication
+
+Rust and Erlang communicate via Redis Pub/Sub channels:
+- `ybm:reliability:events` — Rust → Erlang (health events, shutdown signals)
+- `ybm:reliability:status` — Erlang → Rust (circuit states, recovery events)
+
+### Key Design Principle
+
+The Erlang layer is **advisory, not blocking**. The Rust backend continues to operate independently even if the Erlang service is unavailable. Erlang provides visibility and coordination signals but does not gate Rust API operations.
+
+See [ADR-018](02-architecture/architecture-decisions/ADR-018-erlang-otp-fault-tolerance.md) for the full rationale and alternatives analysis.
 
 ---
 

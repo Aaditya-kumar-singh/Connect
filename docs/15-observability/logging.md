@@ -6,7 +6,7 @@
 | **Version**       | `1.0.0`                                    |
 | **Status**        | `APPROVED`                                 |
 | **Owner**         | Engineering Lead                           |
-| **Last Updated**  | 2026-10-02                                 |
+| **Last Updated**  | 2026-10-04                                 |
 | **Related Docs**  | DOC-OBS-002 through 007, DOC-DEV-001      |
 | **Related Reqs**  | NFR-021 through NFR-024                    |
 
@@ -86,7 +86,7 @@ All logs are emitted as JSON using the `tracing` + `tracing-subscriber` crates.
 
 ### Prometheus-Compatible Metrics
 
-Exposed at `GET /metrics` in Prometheus text format.
+Exposed at `GET /metrics` in Prometheus text format. Phase 16 currently implements the HTTP, WebSocket, and PostgreSQL pool metrics listed below. Messaging, Redis-operation, and call-specific metrics remain future instrumentation work and are not exposed yet.
 
 #### HTTP Metrics
 
@@ -162,8 +162,7 @@ Returns 200 only if all dependencies are accessible.
   "status": "ready",
   "checks": {
     "postgresql": { "status": "ok", "latency_ms": 2 },
-    "redis": { "status": "ok", "latency_ms": 1 },
-    "r2": { "status": "ok", "latency_ms": 45 }
+    "redis": { "status": "ok", "latency_ms": 1 }
   }
 }
 ```
@@ -175,8 +174,7 @@ If any check fails:
   "status": "not_ready",
   "checks": {
     "postgresql": { "status": "ok", "latency_ms": 2 },
-    "redis": { "status": "error", "error": "Connection refused" },
-    "r2": { "status": "ok", "latency_ms": 45 }
+    "redis": { "status": "error", "error": "Connection refused" }
   }
 }
 ```

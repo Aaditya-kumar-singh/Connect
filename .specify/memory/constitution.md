@@ -51,9 +51,10 @@ Quality is verified continuously through automated, deterministic tests:
 
 ## Technical Constraints & Stack Requirements
 
-- **Backend:** Rust (Stable $\ge$ 1.75), Tokio async runtime, Axum web framework, SQLx, Redis-rs.
+- **Backend:** Rust (Stable $\ge$ 1.75), Tokio async runtime, Axum web framework, SQLx, Redis-rs. Rust is the primary application backend language for all business logic, API endpoints, data access, and client-facing protocols.
+- **Reliability Runtime:** Erlang/OTP 27 (rebar3 build tool). Used exclusively for dedicated reliability/fault-tolerance responsibilities: OTP supervision trees, dependency health monitoring, circuit breakers, recovery coordination. Erlang/OTP must not be used for application business logic. See ADR-018 for rationale.
 - **Database:** PostgreSQL 16 (22-table normalized schema with strict foreign keys and indexes).
-- **Cache & Pub/Sub:** Redis 7 (cluster-ready, standalone in development).
+- **Cache & Pub/Sub:** Redis 7 (cluster-ready, standalone in development). Also used for Rust↔Erlang reliability event exchange.
 - **Object Storage:** Cloudflare R2 / MinIO (S3-compatible API for encrypted media storage).
 - **Audio/Video Calls:** WebRTC P2P mesh for 1:1 calls with coturn STUN/TURN traversal.
 - **Frontend Clients:**
@@ -68,6 +69,7 @@ Quality is verified continuously through automated, deterministic tests:
   - Code formatting: `just fmt` (`cargo fmt` and `prettier`).
   - Static analysis: `just lint` (`cargo clippy -- -D warnings` and `eslint`).
   - Automated test suite: `just test` (`cargo test`).
+  - Erlang tests: `rebar3 eunit` and `rebar3 ct` (for reliability service).
   - Migration validation: `just db-migrate`.
 - **Git & Branching Hygiene:** Feature branches must follow the Spec Kit feature naming conventions (`###-feature-name`), keeping commits focused, atomic, and traceable to spec tasks.
 
@@ -77,4 +79,4 @@ Quality is verified continuously through automated, deterministic tests:
 - Any amendment to these principles requires an updated revision in `.specify/memory/constitution.md`, a semantic version bump, and team review.
 - Compliance is verified during Spec Kit analysis (`speckit-analyze`), pull request reviews, and CI automation.
 
-**Version**: 1.0.0 | **Ratified**: 2026-10-02 | **Last Amended**: 2026-10-03
+**Version**: 1.1.0 | **Ratified**: 2026-10-02 | **Last Amended**: 2026-10-04

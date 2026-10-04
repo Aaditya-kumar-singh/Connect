@@ -3,11 +3,11 @@
 | Field             | Value                                      |
 |-------------------|--------------------------------------------|
 | **Document ID**   | `DOC-ARCH-009`                             |
-| **Version**       | `1.0.0`                                    |
+| **Version**       | `1.1.0`                                    |
 | **Status**        | `APPROVED`                                 |
 | **Owner**         | Engineering Lead                           |
-| **Last Updated**  | 2026-10-02                                 |
-| **Related Docs**  | DOC-ARCH-001, DOC-FT-001                  |
+| **Last Updated**  | 2026-10-04                                 |
+| **Related Docs**  | DOC-ARCH-001, DOC-FT-001, ADR-018         |
 
 ---
 
@@ -48,6 +48,10 @@ graph TB
         EMAIL[Email]
         FCM[FCM]
     end
+
+    subgraph "FD-9: Reliability Runtime"
+        ERLANG[Erlang/OTP]
+    end
 ```
 
 ## Failure Impact Analysis
@@ -63,6 +67,7 @@ graph TB
 | **FD-7** | TURN down | Some calls cannot connect | Users behind symmetric NATs cannot call | STUN still works for most connections; display error for failed calls | Restart TURN; clients retry ICE negotiation |
 | **FD-8** | Email down | OTPs not delivered | Registration and password reset delayed; existing users unaffected | Queue emails for retry; user can request new OTP | Retry queued emails when service recovers |
 | **FD-8** | FCM down | Push notifications not delivered | Backgrounded users miss notification; messages available on app open | Best-effort; messages still delivered via WebSocket on reconnect | Automatic when FCM recovers |
+| **FD-9** | Erlang/OTP down | No infrastructure-level supervision, circuit breakers, or dependency monitoring | No user-visible effect; Rust backend continues operating independently. Reliability signals unavailable until Erlang restarts. | Erlang is advisory, not blocking. Rust `/health` and `/ready` endpoints continue independently. | Restart Erlang container; supervision tree reconstructs state from dependency probes |
 
 ## Key Design Principle: PostgreSQL is the Source of Truth
 
@@ -101,6 +106,7 @@ Total Failure → No service available (auto-restart begins)
 | Axum process crashes | All connections on that instance | ⚠️ Clients reconnect |
 | Cloudflare R2 returns errors | Media operations only | ✅ Yes |
 | TURN server crashes | Relayed calls only; P2P calls unaffected | ✅ Yes |
+| Erlang/OTP reliability service crashes | No reliability signals; Rust unaffected | ✅ Yes |
 
 ---
 

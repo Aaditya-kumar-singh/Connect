@@ -289,6 +289,10 @@ Every WebSocket message is a JSON text frame with this structure:
 }
 ```
 
+#### `call.connected`
+**Purpose:** Confirm the client reached WebRTC `connectionState = connected`
+**Payload:** `{ "call_id": "uuid" }`
+
 #### `call.ice_candidate`
 **Purpose:** Exchange ICE candidates for WebRTC connectivity
 **Payload:**

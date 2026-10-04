@@ -10,7 +10,7 @@
 
 Bootstrap the core Axum backend server skeleton in Rust with clean layered architecture:
 1. Entry point in `backend/src/main.rs` that loads environment configuration via `config.rs`.
-2. Asynchronous connection pool initialization for PostgreSQL (`sqlx::PgPool`) and Redis (`redis::aio::ConnectionManager`).
+2. Lazy PostgreSQL pool initialization (`sqlx::PgPool`) and lightweight Redis client initialization (`redis::Client`) so dependency outages do not prevent the liveness endpoint from starting.
 3. Shared `AppState` containing pools and application configuration.
 4. Liveness probe (`GET /health`) returning version and server uptime without dependency access.
 5. Readiness probe (`GET /ready`) testing PostgreSQL (`SELECT 1`) and Redis (`PING`) with a strict 2s timeout.
@@ -85,12 +85,12 @@ backend/
 ## Architecture & Design Decisions
 
 ### 1. Separation of Liveness vs. Readiness
-- **/health (Liveness)**: Only checks that the Axum process is running and event loop is responsive. Never touches the database or Redis. Orchestrators use this to know if the process has crashed.
+- **/health (Liveness)**: Only checks that the Axum process is running and event loop is responsive. It does not require or touch PostgreSQL or Redis. Dependency availability must not prevent the HTTP server from starting.
 - **/ready (Readiness)**: Actively runs concurrent `SELECT 1` on PostgreSQL and `PING` on Redis with `tokio::time::timeout(Duration::from_secs(2), ...)`. Returns 503 if any dependency fails, preventing traffic routing during outages or cold starts.
 
 ### 2. Standard Middleware Stack
-- `TraceLayer`: Structured tracing for request method, path, status, and latency.
-- `CorsLayer`: Permissive in development, origin-restricted in production.
+- `TraceLayer`: Structured tracing for request method, path, status, latency, and request ID.
+- `CorsLayer`: Uses the configured `CORS_ALLOWED_ORIGINS` list.
 - `TimeoutLayer`: 30-second request timeout to prevent hanging connections.
 - `CompressionLayer`: Gzip compression for JSON responses.
 

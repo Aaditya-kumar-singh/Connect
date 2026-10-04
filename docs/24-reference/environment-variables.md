@@ -47,10 +47,26 @@
 | `PUSH_PROVIDER` | No | `console` | Push provider: `console`, `fcm`, `webpush` | No |
 | `FCM_CREDENTIALS_PATH` | If using FCM | — | Path to Firebase credentials JSON | **Yes** |
 | `VAPID_PRIVATE_KEY` | If using Web Push | — | VAPID private key | **Yes** |
-| `VAPID_PUBLIC_KEY` | If using Web Push | — | VAPID public key | No |
+| `VAPID_PUBLIC_KEY` | If using Web Push | — | VAPID public key for browser subscriptions | No |
+| `VAPID_SUBJECT` | If using Web Push | — | VAPID contact URL (`mailto:` or `https://`) | No |
 | `CORS_ALLOWED_ORIGINS` | No | `http://localhost:3000` | Comma-separated CORS origins | No |
 | `MAX_UPLOAD_SIZE_MB` | No | `50` | Max upload file size in MB | No |
 | `GRACEFUL_SHUTDOWN_TIMEOUT_SECONDS` | No | `30` | Max seconds for graceful shutdown | No |
+
+## Erlang/OTP Reliability Service
+
+| Variable | Required | Default | Description | Sensitive |
+|----------|----------|---------|-------------|-----------|
+| `REDIS_HOST` | No | `127.0.0.1` | Redis hostname for reliability Pub/Sub/probes | No |
+| `REDIS_PORT` | No | `6379` | Redis port | No |
+| `REDIS_PASSWORD` | No | empty | Redis authentication password | **Yes** |
+| `PG_HOST` | No | `127.0.0.1` | PostgreSQL hostname for connectivity probe | No |
+| `PG_PORT` | No | `5432` | PostgreSQL port | No |
+| `R2_ENDPOINT` | No | `http://127.0.0.1:9000` | R2/MinIO endpoint for storage probe | No |
+| `HEALTH_PORT` | No | `8081` | Reliability health endpoint port | No |
+| `PROBE_INTERVAL_PG` | No | `15000` | PostgreSQL probe interval in milliseconds | No |
+| `PROBE_INTERVAL_REDIS` | No | `10000` | Redis probe interval in milliseconds | No |
+| `PROBE_INTERVAL_STORAGE` | No | `30000` | R2/MinIO probe interval in milliseconds | No |
 
 ## Frontend Environment Variables
 
@@ -70,6 +86,7 @@
 | `6379` | Redis | Redis | Cache + pub/sub |
 | `9000` | MinIO (dev) | HTTP | S3-compatible local object storage |
 | `9001` | MinIO Console (dev) | HTTP | MinIO web UI |
+| `8081` | Erlang Reliability | HTTP | Reliability health endpoint |
 | `3478` | coturn STUN | UDP/TCP | STUN NAT traversal |
 | `3478` | coturn TURN | UDP/TCP | TURN media relay |
 | `5349` | coturn TLS | TCP | TURN over TLS |

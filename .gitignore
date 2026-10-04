@@ -3,6 +3,7 @@
 # ============================================================
 
 # Environment variables & secrets
+.wrangler/
 .env
 .env.local
 .env.*.local

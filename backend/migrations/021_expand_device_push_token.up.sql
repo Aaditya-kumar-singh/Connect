@@ -1,0 +1,1 @@
+ALTER TABLE devices ALTER COLUMN push_token TYPE VARCHAR(4096);
